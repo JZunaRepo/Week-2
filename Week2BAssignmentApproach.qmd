@@ -1,0 +1,18 @@
+---
+title: "Week2bAssignmentApproach"
+author: "Jonnathan Zuna Largo"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This assignment focuses on evaluating the performance of a binary classification model and building intuition around how different probability thresholds impact model evaluation metrics. Using prediction outputs from a penguin classification model, the goal is to understand how predicted probabilities translate into class labels and how those decisions affect accuracy, precision, recall, and related metrics. Before beginning the analysis, students are expected to review the provided reading on performance metrics for classification problems and load the penguin_predictions.csv dataset, which contains model predicted probabilities, predicted class labels, and the true class labels used during training.
+
+## Approach
+
+The analysis begins by calculating the null error rate, which represents the error rate achieved by always predicting the majority class, and by visualizing the distribution of the actual class variable to understand class balance. This establishes a baseline for evaluating whether the model performs better than a naive classifier. Next, confusion matrices are computed using three different probability thresholds of 0.2, 0.5, and 0.8 by converting predicted probabilities into class labels at each threshold and identifying true positives, false positives, true negatives, and false negatives. These confusion matrices are then used to calculate key performance metrics including accuracy, precision, recall, and the F1 score for each threshold. The results are summarized in a clear table to allow for comparison across thresholds. Finally, the analysis includes a discussion of real world scenarios where lower or higher thresholds may be preferred, highlighting how threshold choice depends on the relative cost of false positives versus false negatives.
+
+## Potantial Challenges
+
+One challenge is developing intuition for how changing the probability threshold alters the balance between sensitivity and specificity, especially for those new to classification problems. Another challenge is correctly computing and interpreting confusion matrix components at each threshold, as small mistakes can propagate into all derived metrics. Additionally, understanding why certain thresholds are more appropriate in specific real world contexts can be conceptually difficult, since it requires thinking beyond model accuracy and considering the practical consequences of prediction errors.
