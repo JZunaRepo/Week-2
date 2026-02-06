@@ -1,0 +1,18 @@
+---
+title: "MovieRating"
+author: "Jonnathan Zuna Largo"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This project uses the Kaggle Movies Dataset and focuses on two specific tables: "movies_metadata.csv", which contains movie-level information such as the movie "id" and "original_title", and "ratings_small.csv", which includes user ratings with fields such as "userId", "rating", and "timestamp". My foal is to combine these sources to analyze movie ratings by linking movie titles with user-generated rating data, to then prodce a clean, tidy dataset that can be analyzed in R.
+
+## Approach
+
+The process begins by downloading and inspecting both datasets to confirm the appropriate join key and ensure data types are consistent, since movie identifiers in the metadata file may contain non-numeric values. Both datasets are then uploaded into PostgreSQL using the terminal rather than a graphical interface, which involves creating the database, defining the tables, and importing the CSV files. Once loaded, an inner join is performed in PostgreSQL using the movie identifier to link movie titles with their corresponding user ratings, and the result is saved as a new table called movies_ratings. An additional column, PeopleRating, is created and populated for five selected movies to represent manual ratings. The final table is then connected to R using DBI and RPostgres, converted into a tidy dataframe, and analyzed with dplyr to count ratings per user and per movie and compute average ratings.
+
+## Potential Challenges
+
+One challenge is working with PostgreSQL entirely through the terminal for the first time, which introduces trial and error related to file paths, permissions, and table creation. Another challenge is ensuring the movie identifiers align correctly between tables, as inconsistencies in data types or column naming can cause join issues. Finally, connecting PostgreSQL to RStudio can be difficult, particularly when configuring database drivers, authentication, and ensuring the local PostgreSQL service is running properly.
