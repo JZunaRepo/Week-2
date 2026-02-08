@@ -1,0 +1,239 @@
+---
+title: "Movie Rating"
+author: "Jonnathan Zuna Largo"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This project uses the Kaggle Movies Dataset called movie_dataset.csv. The dataset is first uploaded into PostgreSQL, where a subset of six movies is selected for analysis. In parallel, Google Forms is used to collect user ratings for these same six movies, allowing participants to assign ratings on a scale from 1 to 5. The responses from the Google Form are then exported and uploaded into PostgreSQL as a second table. Both tables are joined within PostgreSQL to create a final consolidated table that combines movie information with user provided ratings, and this final table is then connected to RStudio for further analysis.
+
+### Source
+
+kaggle = <https://www.kaggle.com/datasets/utkarshx27/movies-dataset>
+
+Google Form Survey = <https://docs.google.com/forms/d/e/1FAIpQLSd9eVeruZvd2UipiOq_z-DNXTPLi45UubKqzpi60i2m5yIhZA/viewform?usp=header>
+
+Google Form Survey Responses = <https://docs.google.com/spreadsheets/d/1ByYXvOsCi28v_QgOupAf1s7qB0syqnJ8bpTssuRznD0/edit?usp=sharing>
+
+### PostgresSQL Setup
+
+The process will begin with downloding the csv file into the local computer and then using the terminal set up the databse and the first table as movies
+
+```         
+## Create Database
+psql postgres
+CREATE DATABASE movies_db;
+## Creating Table
+psql -d movies_db
+CREATE TABLE movies (
+    index INTEGER,
+    budget BIGINT,
+    genres TEXT,
+    homepage TEXT,
+    id INTEGER,
+    keywords TEXT,
+    original_language VARCHAR(10),
+    original_title TEXT,
+    overview TEXT,
+    popularity DECIMAL(10,6),
+    production_companies TEXT,
+    production_countries TEXT,
+    release_date DATE,
+    revenue BIGINT,
+    runtime DECIMAL(6,1),
+    spoken_languages TEXT,
+    status VARCHAR(50),
+    tagline TEXT,
+    title TEXT,
+    vote_average DECIMAL(3,1),
+    vote_count INTEGER,
+    "cast" TEXT,
+    crew TEXT,
+    director TEXT
+);
+## Importing CSV from Kaggle
+\COPY movies FROM '~/movie_dataset.csv' WITH (FORMAT csv, HEADER true);
+```
+
+In order to select the 6 movies for the survey I selected the movies based on what family and friends have watched previously
+
+```         
+CREATE TABLE selected_movies AS
+SELECT id, original_title, vote_average
+FROM movies
+WHERE original_title IN (
+    'Suicide Squad',
+    'Bad Moms',
+    'Ghostbusters',
+    'Sausage Party',
+    'Star Trek Beyond',
+    'Me Before You'
+);
+```
+
+Given the structure of the survey table, the data had to be rearranged to display user level ratings
+
+```         
+DROP TABLE IF EXISTS movie_ratings CASCADE;
+CREATE TABLE movie_ratings (
+    user_id INTEGER,
+    movie VARCHAR(50),
+    rating INTEGER
+);
+
+INSERT INTO movie_ratings (user_id, movie, rating) VALUES
+-- User 1
+(1, 'Suicide Squad', 2),
+(1, 'Bad Moms', 4),
+(1, 'Ghostbusters', 3),
+(1, 'Sausage Party', 5),
+(1, 'Star Trek Beyond', 5),
+(1, 'Me Before You', 2),
+
+-- User 2
+(2, 'Suicide Squad', 3),
+(2, 'Bad Moms', 3),
+(2, 'Ghostbusters', NULL),
+(2, 'Sausage Party', 2),
+(2, 'Star Trek Beyond', 1),
+(2, 'Me Before You', NULL),
+
+-- User 3
+(3, 'Suicide Squad', 1),
+(3, 'Bad Moms', 5),
+(3, 'Ghostbusters', 5),
+(3, 'Sausage Party', 3),
+(3, 'Star Trek Beyond', NULL),
+(3, 'Me Before You', 5),
+
+-- User 4
+(4, 'Suicide Squad', 3),
+(4, 'Bad Moms', NULL),
+(4, 'Ghostbusters', 4),
+(4, 'Sausage Party', 5),
+(4, 'Star Trek Beyond', 5),
+(4, 'Me Before You', 2),
+
+-- User 5
+(5, 'Suicide Squad', 3),
+(5, 'Bad Moms', 3),
+(5, 'Ghostbusters', 3),
+(5, 'Sausage Party', 4),
+(5, 'Star Trek Beyond', 2),
+(5, 'Me Before You', 4),
+
+-- User 6
+(6, 'Suicide Squad', 4),
+(6, 'Bad Moms', 5),
+(6, 'Ghostbusters', 4),
+(6, 'Sausage Party', NULL),
+(6, 'Star Trek Beyond', NULL),
+(6, 'Me Before You', 5);
+```
+
+Anthropic. (2025). Claude Opus 4.5 \[Large language model\]. https://claude.ai. Accessed February 8, 2026.
+
+The last step on this process is joining the following tables "selected_movies" and "movie_ratings" and save this join as the final table to be used in R studio as "final_movie_ratings".
+
+```         
+CREATE TABLE final_movie_ratings AS
+SELECT 
+    sm.*,
+    mr.*
+FROM selected_movies sm
+LEFT JOIN movie_ratings mr ON sm.original_title = mr.movie;
+```
+
+### R Studio Set up
+
+```{r}
+library(DBI)
+library(RPostgres)
+library(tidyverse)
+```
+
+Connecting to databse
+
+```{r}
+con <- DBI::dbConnect(
+  RPostgres::Postgres(),
+  dbname = "movies_db",
+  host = "localhost",
+  port = 5432,
+  user = Sys.getenv("DB_USER"),
+  password = Sys.getenv("DB_PASSWORD")
+)
+```
+
+```{r}
+movies <- dbReadTable(con, "final_movie_ratings")
+glimpse(movies)
+```
+
+### Analysis
+
+For this analysis, the survey "rating" column is used to calculate the mean rating for each selected movie, which is then compared to the "vote_average" from the original movie dataset. Since the survey ratings were collected on a scale of 1 - 5 and the original dataset uses a scale of 1 - 10, the original "vote_average" will be transferred to a 1 - 5 scale to allow comparison.
+
+```{r}
+movies_standarized <- movies %>%
+  mutate(vote_avg = round(vote_average / 2, 1))
+head(movies_standarized)
+```
+
+Not all users in the survey watched all the selected movies. First we will explore the nulls in our data set.
+
+```{r}
+table(is.na(movies_standarized$rating))
+```
+
+Given that our count is low for nulls, the dataset movies_standarized will be filter for values that are nulls.
+
+```{r}
+movies_clean <- movies_standarized %>%
+  filter(!is.na(rating))
+```
+
+```{r}
+movie_summary <- movies_clean %>%
+  group_by(original_title) %>%
+  summarise(
+    avg_rating = mean(rating,1),
+    vote_avg = first(vote_avg)
+  )
+movie_summary
+```
+
+```{r}
+movie_long <- movie_summary %>%
+  pivot_longer(
+    cols = c(avg_rating, vote_avg),
+    names_to = "rating_type",
+    values_to = "rating_value"
+  ) %>%
+  mutate(
+    rating_type = case_when(
+      rating_type == "avg_rating" ~ "Average User Rating",
+      rating_type == "vote_avg" ~ "Vote Average"
+    )
+  )
+movie_long
+```
+
+Anthropic. (2025). Claude Opus 4.5 \[Large language model\]. https://claude.ai. Accessed February 8, 2026.
+
+```{r}
+ggplot(movie_long, aes(x = rating_value, y = original_title, fill = rating_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Movie Ratings Comparison",
+    x = "Movie",
+    y = "Rating",
+    fill = "Rating Type"
+  ) 
+```
+
+## Conclusion
+
+Based on the analysis, user ratings are generally higher than vote average. This suggest that the sample rated movies more favorably than the broader audience. However out two movies show a strong agreetment in ratings and those are "Suicide Squad" and "Star Trek Beyond"
