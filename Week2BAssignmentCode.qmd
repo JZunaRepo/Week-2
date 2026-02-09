@@ -1,0 +1,156 @@
+---
+title: "Classification Metrics"
+author: "Jonnathan Zuna Largo"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This assignment focuses on evaluating the performance of a binary classification model and building intuition around how different probability thresholds impact model evaluation metrics. Using prediction outputs from a penguin classification model, the goal is to understand how predicted probabilities translate into class labels and how those decisions affect accuracy, precision, recall, and related metrics.
+
+Source: <https://raw.githubusercontent.com/acatlin/data/refs/heads/master/penguin_predictions.csv>
+
+## Analysis
+
+First we will import the data from github and look at the data and look at the distribution.
+
+```{r}
+library(tidyverse)
+url <- "https://raw.githubusercontent.com/acatlin/data/refs/heads/master/penguin_predictions.csv"
+
+df <- read.csv(
+  file = url
+)
+glimpse(df)
+```
+
+### Null Error Rate
+
+```{r}
+pinguin_count <-df %>%
+  count(sex) %>%
+  mutate(prop = n / sum(n))
+pinguin_count
+```
+
+Male sex is the most common in this dataset.
+
+```{r}
+ggplot(pinguin_count, aes(x = sex, y = n, fill = sex)) +
+  geom_col(alpha = 0.8, width = 0.6)
+```
+
+Next, calculate the null error rate
+
+```{r}
+null_error_rate <- df %>%
+  count(sex) %>%
+  summarise(1 - max(n) / sum(n)) %>%
+  pull()
+print("The Null Error Rate")
+null_error_rate
+```
+
+### Confusion Matrix and metrics with threshold of 0.2
+
+```{r}
+threshold <- 0.2
+
+df <- df %>%
+  mutate(
+    pred = ifelse(.pred_female > threshold, 1, 0),
+    actual = ifelse(sex == "female", 1, 0)
+  )
+
+TP <- sum(df$pred == 1 & df$actual == 1)
+FP <- sum(df$pred == 1 & df$actual == 0)
+TN <- sum(df$pred == 0 & df$actual == 0)
+FN <- sum(df$pred == 0 & df$actual == 1)
+
+TP; FP; TN; FN
+```
+
+```{r}
+total <- TP + FP + TN + FN
+
+accuracy  <- (TP + TN) / total
+precision <- TP / (TP + FP)
+recall    <- TP / (TP + FN)
+f1        <- 2 * (precision * recall) / (precision + recall)
+
+accuracy
+precision
+recall
+f1
+```
+
+### Confusion Matrix and metrics with threshold of 0.5
+
+```{r}
+threshold <- 0.5
+
+df <- df %>%
+  mutate(
+    pred = ifelse(.pred_female > threshold, 1, 0),
+    actual = ifelse(sex == "female", 1, 0)
+  )
+
+TP <- sum(df$pred == 1 & df$actual == 1)
+FP <- sum(df$pred == 1 & df$actual == 0)
+TN <- sum(df$pred == 0 & df$actual == 0)
+FN <- sum(df$pred == 0 & df$actual == 1)
+
+TP; FP; TN; FN
+```
+
+```{r}
+total <- TP + FP + TN + FN
+
+accuracy  <- (TP + TN) / total
+precision <- TP / (TP + FP)
+recall    <- TP / (TP + FN)
+f1        <- 2 * (precision * recall) / (precision + recall)
+
+accuracy
+precision
+recall
+f1
+```
+
+### Confusion Matrix and metrics with threshold of 0.8
+
+```{r}
+threshold <- 0.8
+
+df <- df %>%
+  mutate(
+    pred = ifelse(.pred_female > threshold, 1, 0),
+    actual = ifelse(sex == "female", 1, 0)
+  )
+
+TP <- sum(df$pred == 1 & df$actual == 1)
+FP <- sum(df$pred == 1 & df$actual == 0)
+TN <- sum(df$pred == 0 & df$actual == 0)
+FN <- sum(df$pred == 0 & df$actual == 1)
+
+TP; FP; TN; FN
+```
+
+```{r}
+total <- TP + FP + TN + FN
+
+accuracy  <- (TP + TN) / total
+precision <- TP / (TP + FP)
+recall    <- TP / (TP + FN)
+f1        <- 2 * (precision * recall) / (precision + recall)
+
+accuracy
+precision
+recall
+f1
+```
+
+## Conclusion
+
+The null error is 0.419 and this is the basis for model predictor. In all the thresholds performed in the analysis, the classification models achieve accuracy well above the baseline which tells us a strong predictive performance. 0.2 Threshold, prioritizes recall which successfully identifies most positive cases but lower precision. 0.5 Threshold, gives us a balanced in metrics for accuracy, precision, recall, and F1 score but both false positives and false negatives suggest symmetric error. 0.8 Threshold, gives us higher accuracy and precision. A 0.2 threshold will be preferable in a medical screening since it's better to flag as many positives as possibles where as the 0.8 threshold would be better in bank audits or tax audits to flag positives only when confident.
